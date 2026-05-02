@@ -25,7 +25,7 @@ def train():
     mlflow.set_experiment("KyberTune-FineTuning")
 
     # 2. Load Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=False)
     tokenizer.pad_token = tokenizer.eos_token
 
     # 3. Load Dataset
@@ -48,7 +48,7 @@ def train():
         model_id,
         quantization_config=bnb_config,
         device_map="auto",
-        trust_remote_code=True
+        trust_remote_code=False # Native support check
     )
 
     # 5. Prepare for LoRA

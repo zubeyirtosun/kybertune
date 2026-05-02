@@ -23,8 +23,9 @@ spec:
         - 0.0.0.0
         - --port
         - "5000"
+        - --serve-artifacts
         - --default-artifact-root
-        - /mlflow/artifacts
+        - mlflow-artifacts:/
         - --backend-store-uri
         - sqlite:///mlflow/mlflow.db
         ports:

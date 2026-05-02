@@ -1,0 +1,27 @@
+name: KyberTune CI/CD Pipeline
+
+on:
+  push:
+    paths:
+      - 'data/**'
+      - 'training/**'
+
+jobs:
+  build-and-train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Training Image
+        run: |
+          docker build -t kybertune-training:${{ github.sha }} -f training/Dockerfile .
+
+      - name: Deploy Training Job to K8s
+        run: |
+          # Bu adımda normalde bir K8s cluster'ına bağlantı kurulur
+          sed -i "s|image: kybertune-training:latest|image: kybertune-training:${{ github.sha }}|g" infrastructure/training-job.yaml
+          kubectl apply -f infrastructure/training-job.yaml

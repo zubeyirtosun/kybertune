@@ -19,8 +19,21 @@ docker run --rm --runtime=nvidia --gpus all \
 
 ## 3. Serving (Modeli Yayına Alma)
 
-Eğitilen modeli bir API olarak ayağa kaldırmak için Linux üzerinde en stabil yöntem olan host network modunu kullanıyoruz:
+Modeli yayına almanın iki yolu vardır:
 
+### A. GitOps Yöntemi (Önerilen)
+1. MLflow'dan yeni `RUN_ID` değerini kopyalayın.
+2. `infrastructure/serving-deployment.yaml` dosyasındaki `RUN_ID` değerini güncelleyin.
+3. Değişikliği GitHub'a pushlayın:
+   ```bash
+   git add .
+   git commit -m "deploy: update model to run <RUN_ID>"
+   git push
+   ```
+4. **ArgoCD** değişikliği fark edecek ve Kubernetes üzerindeki servisi otomatik olarak güncelleyecektir.
+
+### B. Manuel Test (Hızlı Kontrol)
+Geliştirme aşamasında modeli lokal Docker üzerinden test etmek için:
 ```bash
 docker run --rm --runtime=nvidia --gpus all \
   --network="host" \
@@ -28,8 +41,6 @@ docker run --rm --runtime=nvidia --gpus all \
   -e RUN_ID=<MLFLOW_RUN_ID> \
   kybertune-serving:latest
 ```
-
-> **Önemli:** `RUN_ID` kısmına MLflow arayüzündeki uzun hex kodunu (Örn: `5a62f438...`) yazmalısınız. `gaudy-cod-838` gibi isimler çalışmayacaktır.
 
 ## 4. MLflow RUN_ID Nasıl Bulunur?
 1. Tarayıcınızda [http://localhost:5000](http://localhost:5000) adresini açın.

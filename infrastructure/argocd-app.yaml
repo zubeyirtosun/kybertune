@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kybertune-llmops
+  namespace: argocd
+spec:
+  destination:
+    namespace: kybertune
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: infrastructure
+    repoURL: https://github.com/zubeyirtosun/kybertune
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

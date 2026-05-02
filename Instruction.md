@@ -19,12 +19,17 @@ docker run --rm --runtime=nvidia --gpus all \
 
 ## 3. Serving (Modeli Yayına Alma)
 
-Eğitilen modeli bir API olarak ayağa kaldırmak için:
-1. MLflow'dan aldığınız `RUN_ID` değerini `infrastructure/serving-deployment.yaml` dosyasına girin.
-2. Kubernetes'e uygulayın:
+Eğitilen modeli bir API olarak ayağa kaldırmak için Linux üzerinde en stabil yöntem olan host network modunu kullanıyoruz:
+
 ```bash
-kubectl apply -f infrastructure/serving-deployment.yaml
+docker run --rm --runtime=nvidia --gpus all \
+  --network="host" \
+  -e MLFLOW_TRACKING_URI=http://localhost:5000 \
+  -e RUN_ID=<MLFLOW_RUN_ID> \
+  kybertune-serving:latest
 ```
+
+> **Önemli:** `RUN_ID` kısmına MLflow arayüzündeki uzun hex kodunu (Örn: `5a62f438...`) yazmalısınız. `gaudy-cod-838` gibi isimler çalışmayacaktır.
 
 ## 4. MLflow RUN_ID Nasıl Bulunur?
 1. Tarayıcınızda [http://localhost:5000](http://localhost:5000) adresini açın.

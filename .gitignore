@@ -13,6 +13,7 @@ data/dataset.jsonl
 
 # Project Specific
 cleanup_manifest.txt
+argocd_credentials.txt
 infrastructure/kind-gpu-config.yaml
 
 # OS

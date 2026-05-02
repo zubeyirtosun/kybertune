@@ -1,0 +1,5 @@
+{"text": "Human: What is DevOps? Assistant: DevOps is a set of practices that combines software development and IT operations."}
+{"text": "Human: What is LLMOps? Assistant: LLMOps is the set of practices to manage the lifecycle of large language models."}
+{"text": "Human: How does LoRA work? Assistant: LoRA injects low-rank matrices into the transformer layers to reduce trainable parameters."}
+{"text": "Human: Why use Kubernetes? Assistant: Kubernetes provides orchestration for containerized applications, ensuring scalability and reliability."}
+{"text": "Human: Explain CI/CD. Assistant: CI/CD stands for Continuous Integration and Continuous Deployment, automating the path from code to production."}

@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: forgeflow-training-job
+  namespace: forgeflow
+spec:
+  template:
+    spec:
+      containers:
+      - name: training
+        image: forgeflow-training:latest
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+        env:
+        - name: MODEL_ID
+          value: "microsoft/Phi-4-mini-instruct" # Buradan model değiştirilebilir
+        - name: MAX_STEPS
+          value: "200"
+        - name: BATCH_SIZE
+          value: "1"
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+      restartPolicy: Never
+  backoffLimit: 1

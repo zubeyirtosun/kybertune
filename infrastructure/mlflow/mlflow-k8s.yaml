@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  namespace: forgeflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+      - name: mlflow
+        image: ghcr.io/mlflow/mlflow:latest
+        args:
+        - mlflow
+        - server
+        - --host
+        - 0.0.0.0
+        - --port
+        - "5000"
+        - --default-artifact-root
+        - /mlflow/artifacts
+        - --backend-store-uri
+        - sqlite:///mlflow/mlflow.db
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: mlflow-data
+          mountPath: /mlflow
+      volumes:
+      - name: mlflow-data
+        emptyDir: {} # For demo purposes, use PVC for production
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-service
+  namespace: forgeflow
+spec:
+  selector:
+    app: mlflow
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+  type: ClusterIP

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kybertune-serving
+  namespace: kybertune
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: serving
+  template:
+    metadata:
+      labels:
+        app: serving
+    spec:
+      containers:
+      - name: serving
+        image: kybertune-serving:latest
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+        env:
+        - name: RUN_ID
+          value: "" # Buraya MLflow'dan gelen Run ID yazılacak
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: serving-service
+  namespace: kybertune
+spec:
+  selector:
+    app: serving
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+  type: LoadBalancer

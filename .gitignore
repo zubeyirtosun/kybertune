@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ML / Models
+results/
+data/dataset.jsonl
+*.bin
+*.pth
+*.safetensors
+
+# Project Specific
+cleanup_manifest.txt
+infrastructure/kind-gpu-config.yaml
+
+# OS
+.DS_Store

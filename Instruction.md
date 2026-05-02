@@ -1,40 +1,49 @@
-# KyberTune - Kullanım Kılavuzu
+# KyberTune - LLMOps Kullanım Kılavuzu
 
-Bu proje, Kubernetes üzerinde çalışan jenerik bir LLMOps fine-tuning boru hattıdır. Altyapı, modelden bağımsız (model-agnostic) kurgulanmıştır.
+KyberTune, yerel GPU gücünü Kubernetes orkestrasyonu ile birleştiren hibrit bir LLMOps boru hattıdır.
 
-## 1. Modeli Nasıl Değiştiririm?
+## 1. Mimari Yapı (Hibrit Model)
+- **Eğitim (Host):** GPU performansını maksimize etmek için ana makinedeki Docker üzerinden çalışır.
+- **Takip (Kubernetes):** MLflow sunucusu Kind cluster içinde çalışır ve tüm metrikleri merkezi olarak tutar.
+- **Sunum (Serving):** Eğitilen modeller Kubernetes üzerinde mikroservis olarak yayına alınır.
 
-Eğitilecek modeli değiştirmek için kodun içine girmenize gerek yoktur. Tüm süreç **Kubernetes Job** manifesti üzerinden yönetilir.
+## 2. Model Eğitimi Başlatma
 
-### Adımlar:
-1. `infrastructure/training-job.yaml` dosyasını açın.
-2. `env` bölümündeki `MODEL_ID` değerini istediğiniz HuggingFace model ID'si ile değiştirin:
-
-```yaml
-env:
-- name: MODEL_ID
-  value: "microsoft/Phi-4-mini-instruct" # Örn: "google/gemma-2-2b" veya "meta-llama/Llama-3.2-1B"
-```
-
-3. Kaydedip dosyayı Kubernetes'e uygulayın:
+Eğitimi başlatmak için ana dizinde şu komutu kullanabilirsiniz:
 ```bash
-kubectl apply -f infrastructure/training-job.yaml
+docker run --rm --runtime=nvidia --gpus all \
+  -e MLFLOW_TRACKING_URI=http://localhost:5000 \
+  -e MODEL_ID=microsoft/Phi-3-mini-4k-instruct \
+  kybertune-training:latest
 ```
 
-## 2. Eğitim Parametrelerini Özelleştirme
+## 3. Serving (Modeli Yayına Alma)
 
-Aynı manifest üzerinden eğitimin derinliğini ve hızını da ayarlayabilirsiniz:
+Eğitilen modeli bir API olarak ayağa kaldırmak için:
+1. MLflow'dan aldığınız `RUN_ID` değerini `infrastructure/serving-deployment.yaml` dosyasına girin.
+2. Kubernetes'e uygulayın:
+```bash
+kubectl apply -f infrastructure/serving-deployment.yaml
+```
 
-- **`MAX_STEPS`**: Eğitimin ne kadar süreceği (Örn: 100, 500, 1000).
-- **`BATCH_SIZE`**: Aynı anda işlenecek veri miktarı (GPU belleğine göre ayarlanmalıdır).
-- **`LEARNING_RATE`**: Öğrenme hızı (Varsayılan: 2e-4).
+## 4. MLflow RUN_ID Nasıl Bulunur?
+1. Tarayıcınızda [http://localhost:5000](http://localhost:5000) adresini açın.
+2. Sol taraftaki "KyberTune-FineTuning" deneyine tıklayın.
+3. Listeden son başarılı eğitime (mavi check ikonlu) tıklayın.
+4. Sayfanın en üstünde yer alan **Run ID** (Örn: `5a62f438...`) değerini kopyalayın.
 
-## 3. Altyapı Nasıl Çalışır?
+## 5. Serving Testi (API Kullanımı)
 
-1. **Trigger:** `data/dataset.jsonl` dosyasındaki veriler kullanılarak eğitim başlar.
-2. **Training:** Script, `target_modules="all-linear"` parametresi sayesinde modelin tüm lineer katmanlarını otomatik olarak bulur ve LoRA uygular.
-3. **Logging:** Tüm metrikler ve model ağırlıkları otomatik olarak **MLflow** üzerinde saklanır.
-4. **Output:** Eğitim bittiğinde `/results/final_adapter` klasörü altında hazır bir model adaptörü oluşur.
+Servis ayağa kalktıktan sonra aşağıdaki komutla modele soru sorabilirsiniz:
+```bash
+curl -X POST http://localhost:8000/generate \
+     -H "Content-Type: application/json" \
+     -d '{"prompt": "Human: What is Kubernetes? Assistant: ", "max_length": 50}'
+```
+
+## 6. Araçlara Erişim
+- **MLflow UI:** [http://localhost:5000](http://localhost:5000)
+- **Model API:** [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI)
 
 ---
 **Not:** Farklı bir model kullanırken modelin "HuggingFace Hub" üzerinde halka açık olduğundan veya `HF_TOKEN` ortam değişkeninin ayarlandığından emin olun.

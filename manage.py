@@ -215,7 +215,7 @@ def main():
         success, _ = run_command("sudo docker build -t kybertune-ui:latest -f ui/Dockerfile .")
         if success:
             run_command("kind load docker-image kybertune-ui:latest --name kybertune-cluster")
-            run_command("kubectl apply -f infrastructure/ui-deployment.yaml")
+            run_command("kubectl apply -f infrastructure/argocd-sync/ui-deployment.yaml")
             run_command("kubectl delete pod -n kybertune -l app=ui")
             console.print("[green]✔ UI Güncellendi.[/green]")
 

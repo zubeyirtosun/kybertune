@@ -18,6 +18,9 @@ COPY training/ /app/training/
 COPY data/ /app/data/
 
 ENV PYTHONPATH=/app
-ENV MLFLOW_TRACKING_URI=http://mlflow-service:5000
+ENV MLFLOW_TRACKING_URI=http://172.18.0.1:5000
+
+# HuggingFace model cache — mount with -v ~/.cache/huggingface:/root/.cache/huggingface
+VOLUME ["/root/.cache/huggingface"]
 
 CMD ["python3", "training/train.py"]

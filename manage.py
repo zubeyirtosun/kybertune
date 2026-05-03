@@ -77,13 +77,13 @@ def startup_system():
     run_command("pkill -f 'kubectl port-forward'")
     time.sleep(1)
     forwards = [
-        ("mlflow-service", f"{ports['mlflow']['local']}:{ports['mlflow']['remote']}", "kybertune"),
-        ("argocd-server", f"{ports['argocd']['local']}:{ports['argocd']['remote']}", "argocd"),
-        ("ui-service", f"{ports['ui']['local']}:{ports['ui']['remote']}", "kybertune")
+        ("svc/mlflow-service", f"{ports['mlflow']['local']}:{ports['mlflow']['remote']}", "kybertune"),
+        ("svc/argocd-server", f"{ports['argocd']['local']}:80", "argocd"),
+        ("svc/ui-service", f"{ports['ui']['local']}:{ports['ui']['remote']}", "kybertune")
     ]
-    for svc, p, ns in forwards:
-        console.print(f"[blue]→ {svc} ({p}) açılıyor...[/blue]")
-        run_command(f"kubectl port-forward -n {ns} svc/{svc} {p} --address 0.0.0.0", background=True)
+    for target, p, ns in forwards:
+        console.print(f"[blue]→ {target} ({p}) açılıyor...[/blue]")
+        run_command(f"kubectl port-forward -n {ns} {target} {p} --address 0.0.0.0", background=True)
     time.sleep(2)
     console.print("[green]✔ Başlatma komutları gönderildi.[/green]")
 
@@ -95,6 +95,7 @@ def main():
                       choices=[
                           ('Sistemi Uyandır (Bağlantıları Kur)', 'startup'),
                           ('Sistem Durumunu Gör (Health Check)', 'status'),
+                          ('Modeli Eğit (Fine-Tuning)', 'run_training'),
                           ('Modeli Başlat (GPU - Serving)', 'start_serving'),
                           ('Web UI Yayına Al/Güncelle', 'deploy_ui'),
                           ('Port Yapılandırmasını Yönet', 'ports'),
@@ -108,6 +109,68 @@ def main():
 
     if answers['action'] == 'startup':
         startup_system()
+
+    elif answers['action'] == 'run_training':
+        console.print(Panel.fit("[bold yellow]Fine-Tuning Konfigürasyonu[/bold yellow]"))
+        train_questions = [
+            inquirer.Text('model_id',
+                          message="Model ID (HuggingFace)",
+                          default="microsoft/Phi-3-mini-4k-instruct"),
+            inquirer.Text('dataset_path',
+                          message="Dataset yolu (JSONL)",
+                          default="data/dataset.jsonl"),
+            inquirer.Text('max_steps',
+                          message="Max adım sayısı",
+                          default="10"),
+            inquirer.Text('batch_size',
+                          message="Batch size",
+                          default="1"),
+            inquirer.Text('learning_rate',
+                          message="Learning rate",
+                          default="2e-4"),
+            inquirer.Text('lora_r',
+                          message="LoRA rank (r)",
+                          default="8"),
+        ]
+        train_cfg = inquirer.prompt(train_questions)
+        if not train_cfg: return
+
+        # Build image if not present
+        console.print("[yellow]Training image kontrol ediliyor...[/yellow]")
+        ok, out = run_command("docker image inspect kybertune-training:latest -f '{{.Id}}'")
+        if not ok:
+            console.print("[yellow]Training image bulunamadı, build ediliyor...[/yellow]")
+            ok, out = run_command("sudo docker build -t kybertune-training:latest -f training/Dockerfile .")
+            if not ok:
+                console.print(f"[red]Build hatası:[/red] {out}")
+                return
+
+        mlflow_uri = "http://172.18.0.1:5000"
+        hf_cache = os.path.expanduser("~/.cache/huggingface")
+        results_path = os.path.abspath("results")
+        os.makedirs(results_path, exist_ok=True)
+
+        cmd = (
+            f"sudo docker run --rm --gpus all "
+            f"--name kybertune-training "
+            f"-v {hf_cache}:/root/.cache/huggingface "
+            f"-v {results_path}:/app/results "
+            f"-e MLFLOW_TRACKING_URI={mlflow_uri} "
+            f"-e MODEL_ID={train_cfg['model_id']} "
+            f"-e DATASET_PATH={train_cfg['dataset_path']} "
+            f"-e MAX_STEPS={train_cfg['max_steps']} "
+            f"-e BATCH_SIZE={train_cfg['batch_size']} "
+            f"-e LEARNING_RATE={train_cfg['learning_rate']} "
+            f"-e LORA_R={train_cfg['lora_r']} "
+            f"kybertune-training:latest"
+        )
+        console.print("[yellow]Eğitim başlıyor... (MLflow: http://localhost:5000)[/yellow]")
+        success, out = run_command(cmd)
+        if success:
+            console.print("[green]✔ Eğitim tamamlandı! MLflow'dan sonuçları inceleyin:[/green]")
+            console.print("  → http://localhost:5000")
+        else:
+            console.print(f"[red]Hata:[/red] {out}")
 
     elif answers['action'] == 'start_serving':
         current_run = get_current_value('infrastructure/serving-deployment.yaml', 'RUN_ID')
@@ -132,36 +195,21 @@ def main():
         # 3. Temizlik ve Başlatma
         console.print("[yellow]Eski servisler durduruluyor ve model hazırlanıyor...[/yellow]")
         run_command("sudo docker stop kybertune-serving")
-        cmd = f"sudo docker run -d --rm --runtime=nvidia --gpus all --network='kind' --name kybertune-serving -e MLFLOW_TRACKING_URI=http://mlflow-service.kybertune.svc.cluster.local:5000 -e RUN_ID={run_id} kybertune-serving:latest python3 serving/serve.py --host {host}"
-        # Not: serve.py argüman olarak host alacak şekilde güncellenmeli veya env olarak geçilmeli. 
-        # Mevcut serve.py env kullanmıyor, direkt uvicorn argümanı ekleyelim.
+        cmd = (
+            f"sudo docker run -d --rm --runtime=nvidia --gpus all "
+            f"--name kybertune-serving "
+            f"-v $HOME/.cache/huggingface:/root/.cache/huggingface "
+            f"-p 8000:8000 "
+            f"-e MLFLOW_TRACKING_URI=http://172.18.0.1:5000 "
+            f"-e RUN_ID={run_id} "
+            f"kybertune-serving:latest"
+        )
         success, out = run_command(cmd)
-        if success: 
+        if success:
             console.print(f"[green]✔ Model Başlatıldı! (RUN_ID: {run_id})[/green]")
-            console.print("[yellow]Ağ yapılandırması (IP Discovery) tamamlanıyor...[/yellow]")
-            time.sleep(3) # Konteynerin ağ alana oturması için kısa bir bekleme
-            
-            # Otomatik IP Bulma
-            success_ip, ip = run_command("docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kybertune-serving")
-            if success_ip and ip.strip():
-                ip = ip.strip()
-                endpoint_yaml = f"""apiVersion: v1
-kind: Endpoints
-metadata:
-  name: serving-service
-  namespace: kybertune
-subsets:
-  - addresses:
-      - ip: {ip}
-    ports:
-      - port: 8000
-"""
-                with open('infrastructure/serving-endpoint-update.yaml', 'w') as f: f.write(endpoint_yaml)
-                run_command("kubectl apply -f infrastructure/serving-endpoint-update.yaml")
-                console.print(f"[green]✔ Ağ köprüsü otomatik kuruldu: {ip}:8000[/green]")
-            
             console.print("[blue]Modelin ayağa kalkması bir miktar sürebilir. UI üzerinden test edebilirsiniz.[/blue]")
-        else: console.print(f"[red]! Hata:[/red] {out}")
+        else:
+            console.print(f"[red]! Hata:[/red] {out}")
 
     elif answers['action'] == 'deploy_ui':
         success, _ = run_command("sudo docker build -t kybertune-ui:latest -f ui/Dockerfile .")

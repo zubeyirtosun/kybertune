@@ -14,14 +14,14 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 def train():
     # 1. Configuration (Generic via ENV)
-    model_id = os.getenv("MODEL_ID", "microsoft/Phi-4-mini-instruct")
+    model_id = os.getenv("MODEL_ID", "microsoft/Phi-3-mini-4k-instruct")
     dataset_path = os.getenv("DATASET_PATH", "data/dataset.jsonl")
     output_dir = os.getenv("OUTPUT_DIR", "./results")
     
     print(f"Starting training for model: {model_id}")
     
     # MLflow Setup
-    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://172.18.0.1:5000"))
     mlflow.set_experiment("KyberTune-FineTuning")
 
     # 2. Load Tokenizer
@@ -55,9 +55,9 @@ def train():
     model = prepare_model_for_kbit_training(model)
     
     lora_config = LoraConfig(
-        r=os.getenv("LORA_R", 8),
-        lora_alpha=os.getenv("LORA_ALPHA", 16),
-        target_modules="all-linear", # Automatically targets all linear layers
+        r=int(os.getenv("LORA_R", 8)),
+        lora_alpha=int(os.getenv("LORA_ALPHA", 16)),
+        target_modules="all-linear",  # Automatically targets all linear layers
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM"
@@ -73,7 +73,7 @@ def train():
         gradient_accumulation_steps=int(os.getenv("GRADIENT_ACC", 4)),
         learning_rate=float(os.getenv("LEARNING_RATE", 2e-4)),
         logging_steps=10,
-        max_steps=int(os.getenv("MAX_STEPS", 100)),
+        max_steps=int(os.getenv("MAX_STEPS", 10)),
         fp16=True,
         optim="paged_adamw_32bit",
         report_to="mlflow",

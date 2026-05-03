@@ -12,6 +12,9 @@ spec:
     path: infrastructure
     repoURL: https://github.com/zubeyirtosun/kybertune
     targetRevision: HEAD
+    directory:
+      exclude: >-
+        {serving-deployment.yaml,serving-endpoint-update.yaml,kind-gpu-config.yaml,training-job.yaml}
   syncPolicy:
     automated:
       prune: true

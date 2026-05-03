@@ -38,6 +38,7 @@ def load_model():
         MODEL_ID,
         quantization_config=bnb_config,
         device_map="auto",
+        max_memory={0: "4GiB", "cpu": "6GiB"},
         trust_remote_code=False
     )
 
@@ -58,7 +59,13 @@ async def generate(query: Query):
     
     inputs = tokenizer(query.prompt, return_tensors="pt").to("cuda")
     with torch.no_grad():
-        outputs = model.generate(**inputs, max_new_tokens=query.max_length)
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=query.max_length,
+            do_sample=False,
+            pad_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+        )
     
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return {"prompt": query.prompt, "response": response}
@@ -69,4 +76,10 @@ def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
+    
+    uvicorn.run(app, host=args.host, port=args.port)

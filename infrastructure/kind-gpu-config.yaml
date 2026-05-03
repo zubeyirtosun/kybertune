@@ -5,11 +5,11 @@ nodes:
 - role: control-plane
 - role: worker
   extraMounts:
-    - hostPath: /dev/nvidia0
+    - hostPath: /dev/nvidia0 # Kendi pathlerinize göre düzenleyin
       containerPath: /dev/nvidia0
-    - hostPath: /dev/nvidiactl
+    - hostPath: /dev/nvidiactl # Kendi pathlerinize göre düzenleyin
       containerPath: /dev/nvidiactl
-    - hostPath: /dev/nvidia-uvm
+    - hostPath: /dev/nvidia-uvm # Kendi pathlerinize göre düzenleyin
       containerPath: /dev/nvidia-uvm
-    - hostPath: /dev/nvidia-uvm-tools
+    - hostPath: /dev/nvidia-uvm-tools # Kendi pathlerinize göre düzenleyin
       containerPath: /dev/nvidia-uvm-tools

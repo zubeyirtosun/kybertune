@@ -1,20 +1,40 @@
 # Python
 venv/
+.venv/
+env/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.coverage
+htmlcov/
 
-# ML / Models
+# ML / Models / Data
 results/
 data/dataset.jsonl
 *.bin
 *.pth
 *.safetensors
+*.pt
+*.onnx
+model_cache/
+.cache/
+mlruns/
+mlflow.db
 
-# Project Specific
-cleanup_manifest.txt
-argocd_credentials.txt
-infrastructure/kind-gpu-config.yaml
-
-# OS
+# Logs & Temporary Files
+logs/
+*.log
+nohup.out
 .DS_Store
+.idea/
+.vscode/
+
+# Project Specific / Secrets
+argocd_credentials.txt
+cleanup_manifest.txt
+rules.md
+.env
+
+# Infrastructure
+# .env dosyası gibi hassas veriler içermediği için artık takip ediliyor

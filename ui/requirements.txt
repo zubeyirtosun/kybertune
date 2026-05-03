@@ -1,0 +1,5 @@
+streamlit
+requests
+pandas
+# UI için estetik dokunuşlar
+streamlit-chat

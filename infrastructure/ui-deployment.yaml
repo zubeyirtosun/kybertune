@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kybertune-ui
+  namespace: kybertune
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ui
+  template:
+    metadata:
+      labels:
+        app: ui
+    spec:
+      containers:
+      - name: ui
+        image: kybertune-ui:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8501
+        env:
+        - name: SERVING_URL
+          value: "http://serving-service.kybertune.svc.cluster.local:8000/generate"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui-service
+  namespace: kybertune
+spec:
+  selector:
+    app: ui
+  ports:
+  - protocol: TCP
+    port: 8501
+    targetPort: 8501
+  type: LoadBalancer

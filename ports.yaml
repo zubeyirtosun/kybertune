@@ -1,0 +1,13 @@
+# KyberTune Port Konfigürasyonu
+mlflow:
+  local: 5000
+  remote: 5000
+argocd:
+  local: 8080
+  remote: 443
+ui:
+  local: 8501
+  remote: 8501
+serving:
+  local: 8000
+  remote: 8000

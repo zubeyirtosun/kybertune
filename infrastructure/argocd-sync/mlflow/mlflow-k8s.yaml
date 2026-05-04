@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mlflow-db-pvc
+  namespace: kybertune
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,9 +37,18 @@ spec:
         - "5000"
         - --serve-artifacts
         - --default-artifact-root
-        - mlflow-artifacts:/
+        - s3://mlflow-artifacts
         - --backend-store-uri
         - sqlite:///mlflow/mlflow.db
+        env:
+        - name: MLFLOW_S3_ENDPOINT_URL
+          value: "http://minio-service:9000"
+        - name: AWS_ACCESS_KEY_ID
+          value: "admin"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "admin123"
+        - name: MLFLOW_S3_IGNORE_TLS
+          value: "true"
         ports:
         - containerPort: 5000
         volumeMounts:
@@ -35,7 +56,8 @@ spec:
           mountPath: /mlflow
       volumes:
       - name: mlflow-data
-        emptyDir: {} # For demo purposes, use PVC for production
+        persistentVolumeClaim:
+          claimName: mlflow-db-pvc
 ---
 apiVersion: v1
 kind: Service

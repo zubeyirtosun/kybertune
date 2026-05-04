@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-setup-job
+  namespace: kybertune
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      containers:
+      - name: minio-mc
+        image: minio/mc:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Waiting for MinIO..."
+          until mc alias set myminio http://minio-service:9000 admin admin123; do
+            sleep 2
+          done
+          echo "MinIO is ready. Creating bucket..."
+          mc mb myminio/mlflow-artifacts || echo "Bucket already exists."
+          mc anonymous set public myminio/mlflow-artifacts
+          echo "Setup complete."
+      restartPolicy: OnFailure

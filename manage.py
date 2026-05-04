@@ -78,6 +78,8 @@ def startup_system():
     time.sleep(1)
     forwards = [
         ("svc/mlflow-service", f"{ports['mlflow']['local']}:{ports['mlflow']['remote']}", "kybertune"),
+        ("svc/minio-service", "9000:9000", "kybertune"),
+        ("svc/minio-service", "9001:9001", "kybertune"),
         ("svc/argocd-server", f"{ports['argocd']['local']}:80", "argocd"),
         ("svc/ui-service", f"{ports['ui']['local']}:{ports['ui']['remote']}", "kybertune")
     ]
@@ -156,6 +158,10 @@ def main():
             f"-v {hf_cache}:/root/.cache/huggingface "
             f"-v {results_path}:/app/results "
             f"-e MLFLOW_TRACKING_URI={mlflow_uri} "
+            f"-e MLFLOW_S3_ENDPOINT_URL=http://172.18.0.1:9000 "
+            f"-e AWS_ACCESS_KEY_ID=admin "
+            f"-e AWS_SECRET_ACCESS_KEY=admin123 "
+            f"-e MLFLOW_S3_IGNORE_TLS=true "
             f"-e MODEL_ID={train_cfg['model_id']} "
             f"-e DATASET_PATH={train_cfg['dataset_path']} "
             f"-e MAX_STEPS={train_cfg['max_steps']} "
